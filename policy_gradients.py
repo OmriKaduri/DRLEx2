@@ -160,6 +160,10 @@ with tf.Session() as sess, tf.summary.FileWriter(LOGDIR) as tb_logger:
             _, loss = sess.run([policy.optimizer, policy.loss], feed_dict)
             avg_loss += loss
 
-        tf.summary.scalar('reward', step_done)
-        tf.summary.scalar('avg loss', avg_loss / step_done)
-        tf.summary.scalar('reward_avg_100_eps', sum(sliding_avg) / len(sliding_avg))
+        summary = tf.Summary(value=[tf.Summary.Value(tag='reward',
+                                             simple_value=step_done),
+                           tf.Summary.Value(tag='avg_loss',
+                                             simple_value=avg_loss / step_done),
+                           tf.Summary.Value(tag='reward_avg_100_eps',
+                                             simple_value=sum(sliding_avg) / len(sliding_avg))])
+        tb_logger.add_summary(summary, episode)

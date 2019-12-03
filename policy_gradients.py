@@ -20,11 +20,12 @@ class ValueEstimator():
 
     def __init__(self, state_size, learning_rate=0.1, scope="value_estimator"):
         with tf.variable_scope(scope):
-            self.state = tf.placeholder(tf.int32, [state_size], "state")
+            self.state = tf.placeholder(tf.float32, [None, state_size], name="state")
             self.target = tf.placeholder(dtype=tf.float32, name="target")
 
             # This is just table lookup estimator
-            state_one_hot = tf.one_hot(self.state, int(state_size))
+            # state_one_hot = tf.one_hot(self.state, int(state_size))
+            state_one_hot = self.state
             self.output_layer = tf.contrib.layers.fully_connected(
                 inputs=tf.expand_dims(state_one_hot, 0),
                 num_outputs=1,
@@ -39,13 +40,10 @@ class ValueEstimator():
                 self.loss, global_step=tf.contrib.framework.get_global_step())
 
     def predict(self, state, sess=None):
-        state = state.reshape(-1)
         sess = sess or tf.get_default_session()
         return sess.run(self.value_estimate, {self.state: state})
 
     def update(self, state, target, sess=None):
-        state = state.reshape(-1)
-
         sess = sess or tf.get_default_session()
         feed_dict = {self.state: state, self.target: target}
         _, loss = sess.run([self.train_op, self.loss], feed_dict)
@@ -89,14 +87,14 @@ action_size = env.action_space.n
 max_episodes = 5000
 max_steps = 501
 discount_factor = 0.99
-learning_rate = 0.0004
-
+policy_learning_rate = 0.0004
+value_learning_rate = 0.05
 render = False
 
 # Initialize the policy network
 tf.reset_default_graph()
-policy = PolicyNetwork(state_size, action_size, learning_rate)
-value_estimator = ValueEstimator(state_size)
+policy = PolicyNetwork(state_size, action_size, learning_rate=policy_learning_rate)
+value_estimator = ValueEstimator(state_size, learning_rate=value_learning_rate)
 
 LOGDIR = './TensorBoard/Q1' + f"/DQLearning_{dt.datetime.now().strftime('%d%m%Y%H%M')}"
 # Start training the agent with REINFORCE algorithm

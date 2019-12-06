@@ -108,6 +108,7 @@ with tf.Session() as sess, tf.summary.FileWriter(LOGDIR) as tb_logger:
     sliding_avg = collections.deque(maxlen=100)
     # step_done = tf.get_variable('step_done', shape=[])
     i = 0
+    steps_per_episode = []
     for episode in range(max_episodes):
         state = env.reset()
         state = state.reshape([1, state_size])
@@ -126,7 +127,7 @@ with tf.Session() as sess, tf.summary.FileWriter(LOGDIR) as tb_logger:
             action_one_hot = np.zeros(action_size)
             action_one_hot[action] = 1
             episode_transitions.append(
-                    Transition(state=state, action=action_one_hot, reward=reward, next_state=next_state, done=done))
+                Transition(state=state, action=action_one_hot, reward=reward, next_state=next_state, done=done))
             episode_rewards[episode] += reward
 
             if done:
@@ -142,7 +143,7 @@ with tf.Session() as sess, tf.summary.FileWriter(LOGDIR) as tb_logger:
                     solved = True
                 break
             state = next_state
-
+        steps_per_episode.append(step_done)
         if solved:
             break
         avg_loss = 0.0
@@ -151,19 +152,22 @@ with tf.Session() as sess, tf.summary.FileWriter(LOGDIR) as tb_logger:
             total_discounted_return = sum(
                 discount_factor ** i * t.reward for i, t in enumerate(episode_transitions[t:]))  # Rt
 
-            baseline_value = value_estimator.predict(transition.state)
-            advantage = total_discounted_return - baseline_value
-            value_estimator.update(transition.state, total_discounted_return)
+            # baseline_value = value_estimator.predict(transition.state)
+            # advantage = total_discounted_return - baseline_value
+            # value_estimator.update(transition.state, total_discounted_return)
 
-            feed_dict = {policy.state: transition.state, policy.R_t: advantage,
+            feed_dict = {policy.state: transition.state, policy.R_t: total_discounted_return,
                          policy.action: transition.action}
             _, loss = sess.run([policy.optimizer, policy.loss], feed_dict)
             avg_loss += loss
 
         summary = tf.Summary(value=[tf.Summary.Value(tag='reward',
-                                             simple_value=step_done),
-                           tf.Summary.Value(tag='avg_loss',
-                                             simple_value=avg_loss / step_done),
-                           tf.Summary.Value(tag='reward_avg_100_eps',
-                                             simple_value=sum(sliding_avg) / len(sliding_avg))])
+                                                     simple_value=step_done),
+                                    tf.Summary.Value(tag='avg_loss',
+                                                     simple_value=avg_loss / step_done),
+                                    tf.Summary.Value(tag='reward_avg_100_eps',
+                                                     simple_value=sum(sliding_avg) / len(sliding_avg))])
         tb_logger.add_summary(summary, episode)
+
+    print("Avg number of steps per episode:", np.mean(steps_per_episode))
+    print("Total number of steps:", np.sum(steps_per_episode))

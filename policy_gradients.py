@@ -111,7 +111,7 @@ with tf.Session() as sess, tf.summary.FileWriter(LOGDIR) as tb_logger:
     steps_per_episode = []
     for episode in range(max_episodes):
         state = env.reset()
-        state = state.reshape([1, state_size])
+        state = state.reshape([1    , state_size])
         episode_transitions = []
 
         for step in range(max_steps):

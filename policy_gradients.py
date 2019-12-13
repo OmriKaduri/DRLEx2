@@ -152,11 +152,11 @@ with tf.Session() as sess, tf.summary.FileWriter(LOGDIR) as tb_logger:
             total_discounted_return = sum(
                 discount_factor ** i * t.reward for i, t in enumerate(episode_transitions[t:]))  # Rt
 
-            # baseline_value = value_estimator.predict(transition.state)
-            # advantage = total_discounted_return - baseline_value
-            # value_estimator.update(transition.state, total_discounted_return)
+            baseline_value = value_estimator.predict(transition.state)
+            advantage = total_discounted_return - baseline_value
+            value_estimator.update(transition.state, total_discounted_return)
 
-            feed_dict = {policy.state: transition.state, policy.R_t: total_discounted_return,
+            feed_dict = {policy.state: transition.state, policy.R_t: advantage,
                          policy.action: transition.action}
             _, loss = sess.run([policy.optimizer, policy.loss], feed_dict)
             avg_loss += loss
